@@ -1,0 +1,10 @@
+prefix=/usr/local
+libdir=${prefix}/lib
+includedir=${prefix}/include/optic
+
+Name: optic
+Description: Minimal SDL3-based windowing/UI library
+Version: 0.1.0
+Requires: sdl3, sdl3-image, sdl3-ttf
+Libs: -L${libdir} -loptic
+Cflags: -I${includedir}
