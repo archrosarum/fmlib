@@ -1,43 +1,44 @@
-#include "optic.h"
+#include "fmgui.h"
 #include <stdio.h>
+#include <stdlib.h>
 
-
-
-int main()
+int main(int argc, char* argv[])
 {
-	
+    window win = mkwin();
+    current_window = &win;
+    modwinbg((rgba){255, 255, 255, 255});
 
-	window win = mkwin();
-	modwinbg(&win, (rgba){0, 0, 0, 128});
+    /* reze */
+    rect reze_hitbox = mkrect(
+        &win.root,
+        vecmes_from_x((mes){0.5, 0}),
+        (vec_mes){.x = {0, 0}, .y = {1, 0}},
+        (vec_mes){.x = {0, 0}, .y = {1, 0}}
+    );
+    image reze_img = mkimg(
+        "reze.png"
+    );
 
-	rect box = mkrect(
-		&win,
-		(vec_mes){(mes){0, 128}, (mes){0, 32}},
-		(vec_mes){(mes){0, 8}, (mes){0, 8}},
-		(vec_mes){(mes){0, 0}, (mes){0, 0}}
-	);
+    /* hello */
+    rect hello_hitbox = mkrect(
+        &win.root,
+        (vec_mes){.x = {0.5, 0}, .y = {0.5, 0}},
+        (vec_mes){.x = {0.5, 0}, .y = {0.3, 0}},
+        (vec_mes){.x = {0.5, 0}, .y = {0.5, 0}}
+    );
+    text hello_txt = mktext(
+        "Meet the beautiful Reze <3"
+    );
+    hello_txt.justify = TEXT_CENTER;
+    hello_txt.font_size = 28;
 
-	while (win.is_open)
-	{
-		updwin(&win);
+    while(win.is_open)
+    {
+        updwin();
 
-		clrwin(&win);
-
-		/* Button behavior */
-		if (chkrect(&box, MOUSE_DOWN)) {
-			rendrect(&box, (rgba){200, 200, 200, 255});
-		} else {
-			rendrect(&box, (rgba){255, 255, 255, 255});
-		}
-		if (chkrect(&box, M_PRESS)) {
-			printf("Press!\n");
-			fflush(stdout);
-		}
-
-		
-
-		preswin(&win);
-	}
-
-	return 0;
+        clrwin();
+        rendimg(&reze_hitbox, &reze_img);
+        rendtxt(&hello_hitbox, &hello_txt);
+        preswin();
+    }
 }

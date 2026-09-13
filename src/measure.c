@@ -1,70 +1,86 @@
-#include "optic.h"
+#include "internal.h"
+#include <limits.h>
+#include <math.h>
 
-
-mes newmes(float pct, int px)
+static bool resolve_measure_precise(int extent, mes value, double* out)
 {
-	/* Package arguments into a measure vector struct and return */
-	mes new_mes;
-	new_mes.pct = pct;
-	new_mes.px = px;
-
-	return new_mes;
+    double result = (double)extent * value.pct + value.px;
+    if (!out || !isfinite(result)) return false;
+    *out = result;
+    return true;
 }
 
-int resmes(SDL_Window* win, dimention dim, mes mes)
+bool fmgui_resolve_measure(int extent, mes value, int* out)
 {
-	/* Get the appropriate window pixel dimention */
-	int winpx;
-	if (dim == WIDTH)
-	{
-		SDL_GetWindowSize(win, &winpx, NULL);
-	}
-	else if (dim == HEIGHT)
-	{
-		SDL_GetWindowSize(win, NULL, &winpx);
-	}
-
-	/* Compute and return the resolved measure */
-	int res = (winpx * mes.pct) + mes.px;
-	return res;
+    double result;
+    if (!out || !resolve_measure_precise(extent, value, &result) ||
+        result < INT_MIN || result > INT_MAX) return false;
+    *out = (int)result;
+    return true;
 }
 
+bool fmgui_resolve_vec_measure_precise(int x_extent, int y_extent, vec_mes value,
+    double* x, double* y)
+{
+    if (!x || !y) return false;
+    switch (value.mode) {
+        case VEC_MES_INDEPENDENT:
+            return resolve_measure_precise(x_extent, value.x, x) &&
+                resolve_measure_precise(y_extent, value.y, y);
+        case VEC_MES_FROM_X:
+            if (!resolve_measure_precise(x_extent, value.x, x)) return false;
+            *y = *x;
+            return true;
+        case VEC_MES_FROM_Y:
+            if (!resolve_measure_precise(y_extent, value.y, y)) return false;
+            *x = *y;
+            return true;
+        default:
+            return false;
+    }
+}
 
+bool fmgui_resolve_vec_measure(int x_extent, int y_extent, vec_mes value, vec_i* out)
+{
+    double x, y;
+    if (!out || !fmgui_resolve_vec_measure_precise(x_extent, y_extent, value, &x, &y) ||
+        x < INT_MIN || x > INT_MAX || y < INT_MIN || y > INT_MAX) return false;
+    out->x = (int)x;
+    out->y = (int)y;
+    return true;
+}
+
+mes newmes(float pct, int px) { return (mes){pct, px}; }
 vec_mes newvecmes(mes x, mes y)
 {
-	/* Package arguments into a measure vector struct and return */
-	vec_mes new_vec_mes;
-	new_vec_mes.x = x;
-	new_vec_mes.y = y;
-
-	return new_vec_mes;
+    return (vec_mes){.x = x, .y = y, .mode = VEC_MES_INDEPENDENT};
 }
 
-vec_i resvecmes(SDL_Window* win, vec_mes vec_mes)
+vec_mes vecmes_from_x(mes x)
 {
-	/* Get window pixel dimentions */
-	int winpx_w, winpx_h;
-	SDL_GetWindowSize(win, &winpx_w, &winpx_h);
-
-	/* Compute and return the resolved measure vector */
-	vec_i res;
-	res.x = (winpx_w * vec_mes.x.pct) + vec_mes.x.px;
-	res.y = (winpx_h * vec_mes.y.pct) + vec_mes.y.px;
-
-	return res;
+    return (vec_mes){.x = x, .y = x, .mode = VEC_MES_FROM_X};
 }
 
-rect mkrect(window* win, vec_mes size, vec_mes pos, vec_mes anchor)
+vec_mes vecmes_from_y(mes y)
 {
-	rect new_rect =
-	{
-		pos,
-		size,
-		anchor,
-		0,
-		0,
-		win
-	};
+    return (vec_mes){.x = y, .y = y, .mode = VEC_MES_FROM_Y};
+}
 
-	return new_rect;
+int resmes(dimention dim, mes value)
+{
+    SDL_Window* win = current_window ? current_window->winptr : NULL;
+    int w, h, result;
+    if (!win || (dim != WIDTH && dim != HEIGHT) || !SDL_GetWindowSize(win, &w, &h) ||
+        !fmgui_resolve_measure(dim == WIDTH ? w : h, value, &result)) return 0;
+    return result;
+}
+
+vec_i resvecmes(vec_mes value)
+{
+    SDL_Window* win = current_window ? current_window->winptr : NULL;
+    int w, h;
+    vec_i result = {0};
+    if (!win || !SDL_GetWindowSize(win, &w, &h) ||
+        !fmgui_resolve_vec_measure(w, h, value, &result)) return (vec_i){0};
+    return result;
 }
